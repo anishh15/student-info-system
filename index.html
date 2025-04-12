@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Info System</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        h2 {
+            text-align: center;
+            color: #2d3748;
+        }
+        form, .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: #edf2f7;
+            border-radius: 10px;
+        }
+        input, button, select {
+            flex: 1 1 250px;
+            padding: 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background: #48bb78;
+            color: #fff;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #38a169;
+        }
+        .tableContainer {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #5a67d8;
+            color: white;
+            cursor: pointer;
+        }
+        .deleteBtn, .editBtn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+        }
+        .deleteBtn { background: #e53e3e; }
+        .editBtn { background: #f6ad55; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Student Information System</h2>
+        <form id="studentForm">
+            <input type="text" id="name" placeholder="Full Name" required>
+            <input type="text" id="roll" placeholder="Roll Number" required>
+            <input type="text" id="course" placeholder="Course Name" required>
+            <input type="text" id="skills" placeholder="Skills (comma-separated)" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="tel" id="phone" placeholder="Phone" required>
+            <button type="submit">Add Student</button>
+        </form>
+        <div class="controls">
+            <input type="text" id="search" placeholder="Search by Name or Roll Number">
+            <select id="sortOptions">
+                <option value="name">Sort by Name</option>
+                <option value="roll">Sort by Roll Number</option>
+            </select>
+        </div>
+        <div class="tableContainer">
+            <table id="studentTable">
+                <thead>
+                    <tr>
+                        <th>Sr.No.</th>
+                        <th onclick="sortTable('name')">Name</th>
+                        <th onclick="sortTable('roll')">Roll</th>
+                        <th>Course</th>
+                        <th>Skills</th>
+                        <th>Contact</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        let students = JSON.parse(localStorage.getItem('students')) || [];
+        let searchTerm="";
+
+        document.getElementById("studentForm").addEventListener("submit",function(e){
+            e.preventDefault();
+            addStudent();
+        });
+
+        function addStudent(){
+            let name = document.getElementById("name").value.trim();
+            let roll = document.getElementById("roll").value.trim();
+            let course = document.getElementById("course").value.trim();
+            let skills = document.getElementById("skills").value.split(",").map(s => s.trim()).filter(s => s!="");
+            let email = document.getElementById("email").value.trim();
+            let phone = document.getElementById("phone").value.trim();
+            students.push({name, roll, course, skills, email, phone});
+            localStorage.setItem("students",JSON.stringify(students));
+            displayStudents();
+            document.getElementById("studentForm").reset();
+        }
+
+        function displayStudents(){
+            let tbody= document.querySelector("#studentTable tbody");
+            tbody.innerHTML = "";
+            let listToDisplay = students;
+            if(searchTerm){
+                listToDisplay = students.map((s, index) => ({...s, globalIndex: index})).filter(s => s.name.toLowerCase().includes(searchTerm) || s.roll.toLowerCase().includes(searchTerm));
+            }
+            
+            listToDisplay.forEach((s,i) => {
+                let idx = searchTerm ? s.globalIndex: i;
+                let tr = document.createElement("tr");
+                tr.innerHTML = `<td>${i+1}</td>
+                                <td>${s.name}</td>
+                                <td>${s.roll}</td>
+                                <td>${s.course}</td>
+                                <td><ul>${s.skills.map(skill => `<li>${skill}</li>`).join("")}</ul></td>
+                                <td>${s.email}<br>${s.phone}</td>
+                                <td>
+                                    <button id="editbtn" onclick="editStudent(${idx})">Edit</button>
+                                    <button id="deletebtn" style="color: white; background-color:red;" onclick="deleteStudent(${idx})">Delete</button>
+                                </td>`;
+                tbody.appendChild(tr);
+            })
+        }
+
+        function deleteStudent(i){
+            students.splice(i,1);
+            localStorage.setItem('students',JSON.stringify(students));
+            displayStudents();
+        }
+
+        function editStudent(i){
+            s=students[i];
+            document.getElementById("name").value = s.name;
+            document.getElementById("roll").value = s.roll;
+            document.getElementById("course").value = s.course;
+            document.getElementById("skills").value = s.skills.join(", ");
+            document.getElementById("email").value = s.email;
+            document.getElementById("phone").value = s.phone;
+            students.splice(i,1);
+            localStorage.setItem('students', JSON.stringify(students));
+            displayStudents();
+        }
+
+        function sortTable(prop){
+            if(prop === "roll"){
+                students.sort((a,b) => {
+                    let rollA = a.roll.match(/\d+$/);
+                    let rollB = b.roll.match(/\d+$/);
+                    let numA = rollA ? parseInt(rollA[0]): 0;
+                    let numB = rollB ? parseInt(rollB[0]): 0;
+                    return numA - numB;
+                })
+            }
+            else{
+                students.sort((a,b) => (a[prop].localeCompare(b[prop])));
+            }
+            localStorage.setItem("students", JSON.stringify(students));
+            displayStudents();
+        }
+
+        document.getElementById("sortOptions").addEventListener("change", function(){
+            sortTable(this.value);
+        });
+
+        document.getElementById("search").addEventListener("input", function(){
+            searchTerm = this.value.trim().toLowerCase();
+            displayStudents();
+        })
+
+        displayStudents();
+    </script>
+</body>
+</html>
